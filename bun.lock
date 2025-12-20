@@ -14,15 +14,15 @@
     "packages/aztec-contracts": {
       "name": "@chameleon_money/aztec-contracts",
       "dependencies": {
-        "@aztec/accounts": "3.0.0-devnet.5",
-        "@aztec/aztec.js": "3.0.0-devnet.5",
-        "@aztec/noir-contracts.js": "3.0.0-devnet.5",
-        "@aztec/protocol-contracts": "3.0.0-devnet.5",
-        "@aztec/pxe": "3.0.0-devnet.5",
-        "@aztec/stdlib": "3.0.0-devnet.5",
-        "@aztec/test-wallet": "3.0.0-devnet.5",
+        "@aztec/accounts": "catalog:",
+        "@aztec/aztec.js": "catalog:",
+        "@aztec/noir-contracts.js": "catalog:",
+        "@aztec/protocol-contracts": "catalog:",
+        "@aztec/pxe": "catalog:",
+        "@aztec/stdlib": "catalog:",
+        "@aztec/test-wallet": "catalog:",
         "dotenv": "^17.2.2",
-        "viem": "^2.42.0",
+        "viem": "catalog:",
       },
     },
     "packages/evm-contracts": {
@@ -69,6 +69,16 @@
     "sharp",
     "@biomejs/biome",
   ],
+  "catalog": {
+    "@aztec/accounts": "3.0.0-devnet.5",
+    "@aztec/aztec.js": "3.0.0-devnet.5",
+    "@aztec/noir-contracts.js": "3.0.0-devnet.5",
+    "@aztec/protocol-contracts": "3.0.0-devnet.5",
+    "@aztec/pxe": "3.0.0-devnet.5",
+    "@aztec/stdlib": "3.0.0-devnet.5",
+    "@aztec/test-wallet": "3.0.0-devnet.5",
+    "viem": "^2.42.0",
+  },
   "packages": {
     "@actions/core": ["@actions/core@1.11.1", "", { "dependencies": { "@actions/exec": "^1.1.1", "@actions/http-client": "^2.0.1" } }, "sha512-hXJCSrkwfA46Vd9Z3q4cpEpHB1rL5NG04+/rbqW9d3+CSvtB1tYe8UTpAlixa1vj0m/ULglfEK2UKxMGxCxv5A=="],
 
