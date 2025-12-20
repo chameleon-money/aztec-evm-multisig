@@ -1,0 +1,10 @@
+{
+  "MultiSig-MultiSig.json": {
+    "contractName": "MultiSig",
+    "hash": "acd2d90e48dbb41621c0ae7c5d81c2a2ad470722915a9320a09db735a692b73b"
+  },
+  "wormhole_contracts-Wormhole.json": {
+    "contractName": "Wormhole",
+    "hash": "a5e27d10fe8a1fd41caf8a7e3d19888c70609506c569958b52d0a40d236ceb54"
+  }
+}

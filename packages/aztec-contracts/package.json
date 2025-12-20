@@ -1,5 +1,20 @@
 {
 	"name": "@chameleon_money/aztec-contracts",
 	"type": "module",
-	"private": true
+	"private": true,
+	"scripts": {
+		"codegen": "aztec codegen target --outdir artifacts",
+		"compile": "${AZTEC_NARGO:-aztec-nargo} compile && aztec-postprocess-contract"
+	},
+	"dependencies": {
+		"@aztec/accounts": "3.0.0-devnet.5",
+		"@aztec/aztec.js": "3.0.0-devnet.5",
+		"@aztec/noir-contracts.js": "3.0.0-devnet.5",
+		"@aztec/protocol-contracts": "3.0.0-devnet.5",
+		"@aztec/pxe": "3.0.0-devnet.5",
+		"@aztec/stdlib": "3.0.0-devnet.5",
+		"@aztec/test-wallet": "3.0.0-devnet.5",
+		"dotenv": "^17.2.2",
+		"viem": "^2.42.0"
+	}
 }
