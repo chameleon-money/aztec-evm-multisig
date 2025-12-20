@@ -41,6 +41,10 @@
         "viem": "^2.30.0",
       },
     },
+    "packages/relayer": {
+      "name": "@chameleon_money/relayer",
+      "version": "0.0.0",
+    },
     "packages/webapp": {
       "name": "@chameleon_money/webapp",
       "version": "0.1.0",
@@ -234,6 +238,8 @@
     "@chameleon_money/aztec-contracts": ["@chameleon_money/aztec-contracts@workspace:packages/aztec-contracts"],
 
     "@chameleon_money/evm-contracts": ["@chameleon_money/evm-contracts@workspace:packages/evm-contracts"],
+
+    "@chameleon_money/relayer": ["@chameleon_money/relayer@workspace:packages/relayer"],
 
     "@chameleon_money/webapp": ["@chameleon_money/webapp@workspace:packages/webapp"],
 

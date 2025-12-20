@@ -1,0 +1,12 @@
+{
+  "name": "@chameleon_money/relayer",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "build": "go build -o ./bin/relayer ./...",
+    "dev": "go run ./relayer.go",
+    "start": "./bin/relayer",
+    "test": "go test ./...",
+    "clean": "rm -rf ./bin"
+  }
+}
