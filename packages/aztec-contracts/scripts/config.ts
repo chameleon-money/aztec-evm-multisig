@@ -8,8 +8,8 @@ import { getSponsoredFPCInstance } from "./utils/sponsored_fpc";
 export function getTimeouts() {
   return {
     deployTimeout: 1200000, // 20 minutes
-    txTimeout: 180000,     // 3 minutes
-    waitTimeout: 60000     // 1 minute
+    txTimeout: 180000, // 3 minutes
+    waitTimeout: 60000, // 1 minute
   };
 }
 
@@ -27,6 +27,6 @@ export function deploySigners() {
   return Promise.all([
     deploySchnorrAccount(wallet),
     deploySchnorrAccount(wallet),
-    deploySchnorrAccount(wallet)
+    deploySchnorrAccount(wallet),
   ]);
 }

@@ -1,18 +1,21 @@
 import {
   type ContractInstanceWithAddress,
   getContractInstanceFromInstantiationParams,
-} from '@aztec/aztec.js/contracts';
-import { Fr } from '@aztec/aztec.js/fields';
-import type { Wallet } from '@aztec/aztec.js/wallet';
-import type { LogFn } from '@aztec/foundation/log';
-import { SponsoredFPCContract } from '@aztec/noir-contracts.js/SponsoredFPC';
+} from "@aztec/aztec.js/contracts";
+import { Fr } from "@aztec/aztec.js/fields";
+import type { Wallet } from "@aztec/aztec.js/wallet";
+import type { LogFn } from "@aztec/foundation/log";
+import { SponsoredFPCContract } from "@aztec/noir-contracts.js/SponsoredFPC";
 
 const SPONSORED_FPC_SALT = new Fr(0);
 
 export async function getSponsoredFPCInstance(): Promise<ContractInstanceWithAddress> {
-  return await getContractInstanceFromInstantiationParams(SponsoredFPCContract.artifact, {
-    salt: SPONSORED_FPC_SALT,
-  });
+  return await getContractInstanceFromInstantiationParams(
+    SponsoredFPCContract.artifact,
+    {
+      salt: SPONSORED_FPC_SALT,
+    },
+  );
 }
 
 export async function getSponsoredFPCAddress() {
