@@ -45,6 +45,7 @@
       "name": "@chameleon_money/webapp",
       "version": "0.1.0",
       "dependencies": {
+        "@chameleon_money/aztec-contracts": "workspace:*",
         "next": "16.1.0",
         "react": "19.2.3",
         "react-dom": "19.2.3",

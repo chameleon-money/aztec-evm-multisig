@@ -16,5 +16,15 @@
     "@aztec/test-wallet": "3.0.0-devnet.5",
     "dotenv": "^17.2.2",
     "viem": "^2.42.0"
+  },
+  "exports": {
+    "./MultiSig": {
+      "types": "./artifacts/MultiSig.ts",
+      "default": "./artifacts/MultiSig.ts"
+    },
+    "./Wormhole": {
+      "types": "./artifacts/Wormhole.ts",
+      "default": "./artifacts/Wormhole.ts"
+    }
   }
 }
