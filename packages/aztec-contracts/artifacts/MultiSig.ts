@@ -192,9 +192,6 @@ next_proposal_id: {
     /** public_dispatch(selector: field) */
     public_dispatch: ((selector: FieldLike) => ContractFunctionInteraction) & Pick<ContractMethod, 'selector'>;
 
-    /** send_message_to_wormhole(wormhole_address: struct, nonce: integer, payload_1: array, payload_2: array, payload_3: array, payload_4: array, payload_5: array, payload_6: array, payload_7: array, payload_8: array, message_fee: integer, consistency: integer, token_nonce: field) */
-    send_message_to_wormhole: ((wormhole_address: AztecAddressLike, nonce: (bigint | number), payload_1: (bigint | number)[], payload_2: (bigint | number)[], payload_3: (bigint | number)[], payload_4: (bigint | number)[], payload_5: (bigint | number)[], payload_6: (bigint | number)[], payload_7: (bigint | number)[], payload_8: (bigint | number)[], message_fee: (bigint | number), consistency: (bigint | number), token_nonce: FieldLike) => ContractFunctionInteraction) & Pick<ContractMethod, 'selector'>;
-
     /** sign_proposal(proposal_id: field) */
     sign_proposal: ((proposal_id: FieldLike) => ContractFunctionInteraction) & Pick<ContractMethod, 'selector'>;
 

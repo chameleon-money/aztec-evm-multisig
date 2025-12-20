@@ -399,39 +399,4 @@ pub contract MultiSig {
     fn get_wormhole_address() -> AztecAddress {
         storage.wormhole_address.read()
     }
-
-    #[external("private")]
-    fn send_message_to_wormhole(
-        wormhole_address: AztecAddress,
-        nonce: u64,
-        payload_1: [u8; 31],
-        payload_2: [u8; 31],
-        payload_3: [u8; 31],
-        payload_4: [u8; 31],
-        payload_5: [u8; 31],
-        payload_6: [u8; 31],
-        payload_7: [u8; 31],
-        payload_8: [u8; 31],
-        message_fee: u128,
-        consistency: u8,
-        token_nonce: Field,
-    ) {
-        // Call the Wormhole contract's publish_message_in_private_flat function
-        let _ = Wormhole::at(wormhole_address).publish_message_in_private_flat(
-            nonce,
-            payload_1,
-            payload_2,
-            payload_3,
-            payload_4,
-            payload_5,
-            payload_6,
-            payload_7,
-            payload_8,
-            message_fee,
-            consistency,
-            context.msg_sender().unwrap(),
-            token_nonce,
-        ).call(&mut context);
-    }
-
 }
