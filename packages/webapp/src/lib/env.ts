@@ -2,8 +2,10 @@ import { z } from "zod";
 
 // Schema for public environment variables (available on client and server)
 const publicEnvSchema = z.object({
-  treasuryContractAddress: z.hex(),
-  multisigContractAddress: z.hex(),
+  treasuryContractAddress: z.string(),
+  multisigContractAddress: z.string(),
+  aztecNodeUrl: z.string().url().default("https://devnet.aztec-labs.com"),
+  aztecNetwork: z.enum(["devnet", "testnet", "mainnet"]).default("devnet"),
 });
 
 // Schema for server-only environment variables (not exposed to the client)
@@ -24,6 +26,8 @@ export function validatePublicEnv(): PublicEnv {
   const env = {
     treasuryContractAddress: process.env.NEXT_PUBLIC_TREASURY_CONTRACT_ADDRESS,
     multisigContractAddress: process.env.NEXT_PUBLIC_MULTISIG_CONTRACT_ADDRESS,
+    aztecNodeUrl: process.env.NEXT_PUBLIC_AZTEC_NODE_URL,
+    aztecNetwork: process.env.NEXT_PUBLIC_AZTEC_NETWORK,
   };
 
   try {
