@@ -15,7 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,11 +30,14 @@ import { createMultiSigService } from "@/lib/contracts/multisig";
 import { useProposalStore } from "@/lib/stores/proposal-store";
 import { useWalletStore } from "@/lib/stores/wallet-store";
 import type { Proposal } from "@/lib/types/proposal";
-import { getProposalStatus } from "@/lib/types/proposal";
+import {
+  getOperationTypeLabel,
+  getProposalStatus,
+  OPERATION_TYPES,
+} from "@/lib/types/proposal";
 
 export default function ProposalDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const { isConnected, wallet } = useWalletStore();
   const {
     proposals,
@@ -284,17 +287,20 @@ export default function ProposalDetailPage() {
                     </div>
                   </div>
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                    {proposal.operationType === 1 && (
-                      <Send className="h-6 w-6 text-primary" />
-                    )}
-                    {proposal.operationType === 2 && (
+                    {proposal.operationType === OPERATION_TYPES.ADD_SIGNER && (
                       <Users className="h-6 w-6 text-primary" />
                     )}
-                    {proposal.operationType === 3 && (
+                    {proposal.operationType ===
+                      OPERATION_TYPES.REMOVE_SIGNER && (
                       <Users className="h-6 w-6 text-primary" />
                     )}
-                    {proposal.operationType === 4 && (
+                    {proposal.operationType ===
+                      OPERATION_TYPES.CHANGE_THRESHOLD && (
                       <Settings2 className="h-6 w-6 text-primary" />
+                    )}
+                    {proposal.operationType ===
+                      OPERATION_TYPES.EXECUTE_TRANSACTION && (
+                      <Send className="h-6 w-6 text-primary" />
                     )}
                   </div>
                 </div>
@@ -316,10 +322,7 @@ export default function ProposalDetailPage() {
                       Operation Type
                     </div>
                     <div className="text-sm">
-                      {proposal.operationType === 1 && "Execute Transaction"}
-                      {proposal.operationType === 2 && "Add Signer"}
-                      {proposal.operationType === 3 && "Remove Signer"}
-                      {proposal.operationType === 4 && "Change Threshold"}
+                      {getOperationTypeLabel(proposal.operationType)}
                     </div>
                   </div>
                   <div>
@@ -331,6 +334,83 @@ export default function ProposalDetailPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Type-specific details */}
+                {proposal.operationType === OPERATION_TYPES.ADD_SIGNER &&
+                  proposal.targetAddress && (
+                    <div className="border-t pt-4">
+                      <div className="text-sm font-medium text-muted-foreground mb-1">
+                        Signer to Add
+                      </div>
+                      <div className="text-sm font-mono break-all">
+                        {proposal.targetAddress}
+                      </div>
+                    </div>
+                  )}
+
+                {proposal.operationType === OPERATION_TYPES.REMOVE_SIGNER &&
+                  proposal.targetAddress && (
+                    <div className="border-t pt-4">
+                      <div className="text-sm font-medium text-muted-foreground mb-1">
+                        Signer to Remove
+                      </div>
+                      <div className="text-sm font-mono break-all">
+                        {proposal.targetAddress}
+                      </div>
+                    </div>
+                  )}
+
+                {proposal.operationType ===
+                  OPERATION_TYPES.CHANGE_THRESHOLD && (
+                  <div className="border-t pt-4">
+                    <div className="text-sm font-medium text-muted-foreground mb-1">
+                      New Threshold
+                    </div>
+                    <div className="text-sm">{proposal.newThreshold}</div>
+                  </div>
+                )}
+
+                {proposal.operationType ===
+                  OPERATION_TYPES.EXECUTE_TRANSACTION && (
+                  <div className="border-t pt-4 space-y-3">
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground mb-1">
+                        Token Address
+                      </div>
+                      <div className="text-sm font-mono break-all">
+                        {proposal.transactionToken || "N/A"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground mb-1">
+                        Recipient
+                      </div>
+                      <div className="text-sm font-mono break-all">
+                        {proposal.transactionRecipient || "N/A"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground mb-1">
+                        Amount
+                      </div>
+                      <div className="text-sm">
+                        {proposal.transactionAmount || "0"}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Proposer info */}
+                {proposal.proposer && (
+                  <div className="border-t pt-4">
+                    <div className="text-sm font-medium text-muted-foreground mb-1">
+                      Proposed By
+                    </div>
+                    <div className="text-sm font-mono break-all">
+                      {proposal.proposer}
+                    </div>
+                  </div>
+                )}
 
                 <div className="border-t pt-4">
                   <div className="text-sm font-medium text-muted-foreground mb-2">

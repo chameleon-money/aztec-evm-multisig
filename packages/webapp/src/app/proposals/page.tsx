@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  FileText,
+  Filter,
+  Loader2,
+  PlusCircle,
+  Shield,
+} from "lucide-react";
 import Link from "next/link";
-import { useWalletStore } from "@/lib/stores/wallet-store";
-import { useProposalStore } from "@/lib/stores/proposal-store";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,19 +20,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { WalletConnectButton } from "@/components/wallet/wallet-connect-button";
-import {
-  Shield,
-  PlusCircle,
-  Filter,
-  Loader2,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  FileText,
-} from "lucide-react";
-import { getProposalStatus } from "@/lib/types/proposal";
+import { useProposalStore } from "@/lib/stores/proposal-store";
+import { useWalletStore } from "@/lib/stores/wallet-store";
+import { getOperationTypeLabel, getProposalStatus } from "@/lib/types/proposal";
 
 export default function ProposalsPage() {
   const { isConnected, wallet } = useWalletStore();
@@ -269,7 +269,8 @@ export default function ProposalsPage() {
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              Operation Type: {proposal.operationType}
+                              Operation Type:{" "}
+                              {getOperationTypeLabel(proposal.operationType)}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               Signatures: {proposal.signatureCount} /{" "}

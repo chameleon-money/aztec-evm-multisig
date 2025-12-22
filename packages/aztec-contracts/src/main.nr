@@ -11,6 +11,8 @@
 // - Signatures are private - only the fact that threshold was met is public
 // - Uses nullifiers to prevent double-signing without revealing signer identity
 
+mod multisig_proposal;
+
 use dep::aztec::macros::aztec;
 
 #[aztec]
@@ -29,11 +31,10 @@ pub contract MultiSig {
 
     use dep::wormhole::Wormhole;
 
-    // Operation types
-    global OPERATION_ADD_SIGNER: u8 = 1;
-    global OPERATION_REMOVE_SIGNER: u8 = 2;
-    global OPERATION_CHANGE_THRESHOLD: u8 = 3;
-    global OPERATION_EXECUTE_TRANSACTION: u8 = 4;
+    use crate::multisig_proposal::{
+        OPERATION_ADD_SIGNER, OPERATION_CHANGE_THRESHOLD, OPERATION_EXECUTE_TRANSACTION,
+        OPERATION_REMOVE_SIGNER, Proposal,
+    };
 
     // Proposal expiration time (in blocks)
     global PROPOSAL_EXPIRY: u32 = 1000;
@@ -52,17 +53,8 @@ pub contract MultiSig {
         // Wormhole contract address
         wormhole_address: PublicMutable<AztecAddress, Context>,
 
-        // Proposal fields (simplified storage)
-        proposal_operation_type: Map<Field, PublicMutable<u8, Context>, Context>,
-        proposal_proposer: Map<Field, PublicMutable<AztecAddress, Context>, Context>,
-        proposal_target: Map<Field, PublicMutable<AztecAddress, Context>, Context>,
-        proposal_new_threshold: Map<Field, PublicMutable<u8, Context>, Context>,
-        proposal_transaction_token: Map<Field, PublicMutable<EthAddress, Context>, Context>,
-        proposal_transaction_receipient: Map<Field, PublicMutable<EthAddress, Context>, Context>,
-        proposal_transaction_amount: Map<Field, PublicMutable<Field, Context>, Context>,
-        proposal_signature_count: Map<Field, PublicMutable<u8, Context>, Context>,
-        proposal_executed: Map<Field, PublicMutable<bool, Context>, Context>,
-        proposal_created_at: Map<Field, PublicMutable<u32, Context>, Context>,
+        // Proposals storage
+        proposals: Map<Field, PublicMutable<Proposal, Context>, Context>,
 
         // Next available proposal ID
         next_proposal_id: PublicMutable<Field, Context>,
@@ -113,18 +105,21 @@ pub contract MultiSig {
 
         // Create proposal
         let proposal_id = storage.next_proposal_id.read();
+        let proposal = Proposal::new(
+            proposal_id,
+            OPERATION_ADD_SIGNER,
+            proposer,
+            new_signer,
+            0,
+            EthAddress::zero(),
+            EthAddress::zero(),
+            0,
+            0,
+            false,
+            context.block_number(),
+        );
 
-        storage.proposal_operation_type.at(proposal_id).write(OPERATION_ADD_SIGNER);
-        storage.proposal_proposer.at(proposal_id).write(proposer);
-        storage.proposal_target.at(proposal_id).write(new_signer);
-        storage.proposal_new_threshold.at(proposal_id).write(0); // not used
-        storage.proposal_transaction_token.at(proposal_id).write(EthAddress::zero()); // not used
-        storage.proposal_transaction_receipient.at(proposal_id).write(EthAddress::zero()); // not used
-        storage.proposal_transaction_amount.at(proposal_id).write(0); // not used
-        storage.proposal_signature_count.at(proposal_id).write(0); // no automatic signature
-        storage.proposal_executed.at(proposal_id).write(false);
-        storage.proposal_created_at.at(proposal_id).write(context.block_number());
-
+        storage.proposals.at(proposal_id).write(proposal);
         storage.next_proposal_id.write(proposal_id + 1);
 
         proposal_id
@@ -149,18 +144,21 @@ pub contract MultiSig {
 
         // Create proposal
         let proposal_id = storage.next_proposal_id.read();
+        let proposal = Proposal::new(
+            proposal_id,
+            OPERATION_REMOVE_SIGNER,
+            proposer,
+            signer_to_remove,
+            0,
+            EthAddress::zero(),
+            EthAddress::zero(),
+            0,
+            0,
+            false,
+            context.block_number(),
+        );
 
-        storage.proposal_operation_type.at(proposal_id).write(OPERATION_REMOVE_SIGNER);
-        storage.proposal_proposer.at(proposal_id).write(proposer);
-        storage.proposal_target.at(proposal_id).write(signer_to_remove);
-        storage.proposal_new_threshold.at(proposal_id).write(0); // not used
-        storage.proposal_transaction_token.at(proposal_id).write(EthAddress::zero()); // not used
-        storage.proposal_transaction_receipient.at(proposal_id).write(EthAddress::zero()); // not used
-        storage.proposal_transaction_amount.at(proposal_id).write(0); // not used
-        storage.proposal_signature_count.at(proposal_id).write(0); // no automatic signature
-        storage.proposal_executed.at(proposal_id).write(false);
-        storage.proposal_created_at.at(proposal_id).write(context.block_number());
-
+        storage.proposals.at(proposal_id).write(proposal);
         storage.next_proposal_id.write(proposal_id + 1);
 
         proposal_id
@@ -182,18 +180,21 @@ pub contract MultiSig {
 
         // Create proposal
         let proposal_id = storage.next_proposal_id.read();
+        let proposal = Proposal::new(
+            proposal_id,
+            OPERATION_CHANGE_THRESHOLD,
+            proposer,
+            AztecAddress::zero(),
+            new_threshold,
+            EthAddress::zero(),
+            EthAddress::zero(),
+            0,
+            0,
+            false,
+            context.block_number(),
+        );
 
-        storage.proposal_operation_type.at(proposal_id).write(OPERATION_CHANGE_THRESHOLD);
-        storage.proposal_proposer.at(proposal_id).write(proposer);
-        storage.proposal_target.at(proposal_id).write(AztecAddress::zero()); // not used
-        storage.proposal_new_threshold.at(proposal_id).write(new_threshold);
-        storage.proposal_transaction_token.at(proposal_id).write(EthAddress::zero()); // not used
-        storage.proposal_transaction_receipient.at(proposal_id).write(EthAddress::zero()); // not used
-        storage.proposal_transaction_amount.at(proposal_id).write(0); // not used
-        storage.proposal_signature_count.at(proposal_id).write(0); // no automatic signature
-        storage.proposal_executed.at(proposal_id).write(false);
-        storage.proposal_created_at.at(proposal_id).write(context.block_number());
-
+        storage.proposals.at(proposal_id).write(proposal);
         storage.next_proposal_id.write(proposal_id + 1);
 
         proposal_id
@@ -202,9 +203,9 @@ pub contract MultiSig {
     // Propose executing a transaction
     #[external("public")]
     fn propose_execute_transaction(
-        token: EthAddress, 
-        recipient: EthAddress, 
-        amount: Field
+        token: EthAddress,
+        recipient: EthAddress,
+        amount: Field,
     ) -> Field {
         let proposer = context.msg_sender().unwrap();
 
@@ -213,18 +214,21 @@ pub contract MultiSig {
 
         // Create proposal
         let proposal_id = storage.next_proposal_id.read();
+        let proposal = Proposal::new(
+            proposal_id,
+            OPERATION_EXECUTE_TRANSACTION,
+            proposer,
+            AztecAddress::zero(),
+            0,
+            token,
+            recipient,
+            amount,
+            0,
+            false,
+            context.block_number(),
+        );
 
-        storage.proposal_operation_type.at(proposal_id).write(OPERATION_EXECUTE_TRANSACTION);
-        storage.proposal_proposer.at(proposal_id).write(proposer);
-        storage.proposal_target.at(proposal_id).write(AztecAddress::zero());
-        storage.proposal_new_threshold.at(proposal_id).write(0); // not used
-        storage.proposal_transaction_token.at(proposal_id).write(token);
-        storage.proposal_transaction_receipient.at(proposal_id).write(recipient);
-        storage.proposal_transaction_amount.at(proposal_id).write(amount);
-        storage.proposal_signature_count.at(proposal_id).write(0); // no automatic signature
-        storage.proposal_executed.at(proposal_id).write(false);
-        storage.proposal_created_at.at(proposal_id).write(context.block_number());
-
+        storage.proposals.at(proposal_id).write(proposal);
         storage.next_proposal_id.write(proposal_id + 1);
 
         proposal_id
@@ -259,17 +263,19 @@ pub contract MultiSig {
     #[internal]
     fn increment_signature_count(proposal_id: Field) {
         // Validate proposal exists and is still active
-        let operation_type = storage.proposal_operation_type.at(proposal_id).read();
-        assert(operation_type != 0, "Proposal does not exist");
-        assert(!storage.proposal_executed.at(proposal_id).read(), "Proposal already executed");
+        let proposal = storage.proposals.at(proposal_id).read();
+        assert(proposal.operation_type != 0, "Proposal does not exist");
+        assert(!proposal.executed, "Proposal already executed");
 
         // Check proposal hasn't expired
-        let created_at = storage.proposal_created_at.at(proposal_id).read();
-        assert(context.block_number() <= (created_at + PROPOSAL_EXPIRY), "Proposal has expired");
+        assert(
+            context.block_number() <= (proposal.created_at + PROPOSAL_EXPIRY),
+            "Proposal has expired",
+        );
 
         // Increment signature count (nullifier uniqueness is enforced by Aztec protocol)
-        let current_count = storage.proposal_signature_count.at(proposal_id).read();
-        storage.proposal_signature_count.at(proposal_id).write(current_count + 1);
+        let updated_proposal = proposal.add_signature();
+        storage.proposals.at(proposal_id).write(updated_proposal);
     }
 
     #[external("public")]
@@ -282,44 +288,40 @@ pub contract MultiSig {
     #[external("public")]
     fn execute_proposal(proposal_id: Field) {
         // Validate proposal exists
-        let operation_type = storage.proposal_operation_type.at(proposal_id).read();
-        assert(operation_type != 0, "Proposal does not exist");
-        assert(!storage.proposal_executed.at(proposal_id).read(), "Proposal already executed");
+        let proposal = storage.proposals.at(proposal_id).read();
+        assert(proposal.operation_type != 0, "Proposal does not exist");
+        assert(!proposal.executed, "Proposal already executed");
 
         // Check threshold is met
         let required_threshold = storage.threshold.read();
-        let signature_count = storage.proposal_signature_count.at(proposal_id).read();
-        assert(signature_count >= required_threshold, "Insufficient signatures");
+        assert(proposal.signature_count >= required_threshold, "Insufficient signatures");
 
         // Check proposal hasn't expired
-        let created_at = storage.proposal_created_at.at(proposal_id).read();
-        assert(context.block_number() <= (created_at + PROPOSAL_EXPIRY), "Proposal has expired");
+        assert(
+            context.block_number() <= (proposal.created_at + PROPOSAL_EXPIRY),
+            "Proposal has expired",
+        );
 
         // Execute based on operation type
-        if operation_type == OPERATION_ADD_SIGNER {
+        if proposal.operation_type == OPERATION_ADD_SIGNER {
             // Add new signer
-            let target = storage.proposal_target.at(proposal_id).read();
-            storage.signers.at(target).write(true);
+            storage.signers.at(proposal.target_address).write(true);
             storage.signer_count.write(storage.signer_count.read() + 1);
-        } else if operation_type == OPERATION_REMOVE_SIGNER {
+        } else if proposal.operation_type == OPERATION_REMOVE_SIGNER {
             // Remove signer
-            let target = storage.proposal_target.at(proposal_id).read();
-            storage.signers.at(target).write(false);
+            storage.signers.at(proposal.target_address).write(false);
             storage.signer_count.write(storage.signer_count.read() - 1);
-        } else if operation_type == OPERATION_CHANGE_THRESHOLD {
+        } else if proposal.operation_type == OPERATION_CHANGE_THRESHOLD {
             // Change threshold
-            let new_threshold = storage.proposal_new_threshold.at(proposal_id).read();
-            storage.threshold.write(new_threshold);
-        } else if operation_type == OPERATION_EXECUTE_TRANSACTION {
+            storage.threshold.write(proposal.new_threshold);
+        } else if proposal.operation_type == OPERATION_EXECUTE_TRANSACTION {
             // transaction execution
             let wormhole_address = storage.wormhole_address.read();
-            let token = storage.proposal_transaction_token.at(proposal_id).read();
-            let recipient = storage.proposal_transaction_receipient.at(proposal_id).read();
-            let amount = storage.proposal_transaction_amount.at(proposal_id).read();
 
-            let field_bytes_token: [u8; 32] = token.to_field().to_be_bytes();
-            let field_bytes_recipient: [u8; 32] = recipient.to_field().to_be_bytes();
-            let field_bytes_amount: [u8; 32] = amount.to_be_bytes();
+            let field_bytes_token: [u8; 32] = proposal.transaction_token.to_field().to_be_bytes();
+            let field_bytes_recipient: [u8; 32] =
+                proposal.transaction_recipient.to_field().to_be_bytes();
+            let field_bytes_amount: [u8; 32] = proposal.transaction_amount.to_be_bytes();
             let mut payload_1 = [0; 31];
             let mut payload_2 = [0; 31];
             let mut payload_3 = [0; 31];
@@ -335,68 +337,70 @@ pub contract MultiSig {
                 payload_3[i] = field_bytes_amount[i + 1];
             }
 
-            let _ = Wormhole::at(wormhole_address).publish_message_in_public(
-                proposal_id as u64,
-                [
-                    payload_1, 
-                    payload_2, 
-                    payload_3, 
-                    payload_4, 
-                    payload_5, 
-                    payload_6, 
-                    payload_7, 
-                    payload_8
-                ],
-                0,
-                2,
-                context.msg_sender().unwrap(),
-                0,
-            ).call(&mut context);
+            let _ = Wormhole::at(wormhole_address)
+                .publish_message_in_public(
+                    proposal_id as u64,
+                    [
+                        payload_1, payload_2, payload_3, payload_4, payload_5, payload_6, payload_7,
+                        payload_8,
+                    ],
+                    0,
+                    2,
+                    context.msg_sender().unwrap(),
+                    0,
+                )
+                .call(&mut context);
         }
 
         // Mark proposal as executed
-        storage.proposal_executed.at(proposal_id).write(true);
+        let executed_proposal = proposal.mark_executed();
+        storage.proposals.at(proposal_id).write(executed_proposal);
     }
 
     // View functions
 
-    #[external("public")]
-    fn get_threshold() -> u8 {
+    #[external("utility")]
+    unconstrained fn get_threshold() -> u8 {
         storage.threshold.read()
     }
 
-    #[external("public")]
-    fn get_signer_count() -> u8 {
+    #[external("utility")]
+    unconstrained fn get_signer_count() -> u8 {
         storage.signer_count.read()
     }
 
-    #[external("public")]
-    fn is_signer(address: AztecAddress) -> bool {
+    #[external("utility")]
+    unconstrained fn is_signer(address: AztecAddress) -> bool {
         storage.signers.at(address).read()
     }
 
-    #[external("public")]
-    fn get_proposal_operation_type(proposal_id: Field) -> u8 {
-        storage.proposal_operation_type.at(proposal_id).read()
+    #[external("utility")]
+    unconstrained fn get_proposal(proposal_id: Field) -> Proposal {
+        storage.proposals.at(proposal_id).read()
     }
 
-    #[external("public")]
-    fn get_proposal_signature_count(proposal_id: Field) -> u8 {
-        storage.proposal_signature_count.at(proposal_id).read()
+    #[external("utility")]
+    unconstrained fn get_proposal_operation_type(proposal_id: Field) -> u8 {
+        storage.proposals.at(proposal_id).read().operation_type
     }
 
-    #[external("public")]
-    fn get_proposal_executed(proposal_id: Field) -> bool {
-        storage.proposal_executed.at(proposal_id).read()
+    #[external("utility")]
+    unconstrained fn get_proposal_signature_count(proposal_id: Field) -> u8 {
+        storage.proposals.at(proposal_id).read().signature_count
     }
 
-    #[external("public")]
-    fn get_next_proposal_id() -> Field {
+    #[external("utility")]
+    unconstrained fn get_proposal_executed(proposal_id: Field) -> bool {
+        storage.proposals.at(proposal_id).read().executed
+    }
+
+    #[external("utility")]
+    unconstrained fn get_next_proposal_id() -> Field {
         storage.next_proposal_id.read()
     }
 
-    #[external("public")]
-    fn get_wormhole_address() -> AztecAddress {
+    #[external("utility")]
+    unconstrained fn get_wormhole_address() -> AztecAddress {
         storage.wormhole_address.read()
     }
 }

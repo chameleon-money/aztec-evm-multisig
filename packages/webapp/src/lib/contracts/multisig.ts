@@ -145,9 +145,13 @@ export class MultiSigService {
     const from = await this.getUserAddress();
 
     // Get next proposal ID
-    const nextId = await contract.methods
-      .get_next_proposal_id()
-      .simulate({ from });
+    const nextId = await contract.methods.get_next_proposal_id().simulate({
+      from,
+      fee: {
+        paymentMethod: useRegularFees(),
+        maxFeePerGas: { feePerL2Gas: 20000, feePerDaGas: 20000 },
+      },
+    });
 
     // Create proposal
     const tx = await contract.methods
@@ -173,9 +177,13 @@ export class MultiSigService {
     const contract = await this.ensureContract();
     const from = await this.getUserAddress();
 
-    const nextId = await contract.methods
-      .get_next_proposal_id()
-      .simulate({ from });
+    const nextId = await contract.methods.get_next_proposal_id().simulate({
+      from,
+      fee: {
+        paymentMethod: useRegularFees(),
+        maxFeePerGas: { feePerL2Gas: 20000, feePerDaGas: 20000 },
+      },
+    });
 
     const tx = await contract.methods
       .propose_add_signer(AztecAddress.fromString(signerAddress))
@@ -196,9 +204,13 @@ export class MultiSigService {
     const contract = await this.ensureContract();
     const from = await this.getUserAddress();
 
-    const nextId = await contract.methods
-      .get_next_proposal_id()
-      .simulate({ from });
+    const nextId = await contract.methods.get_next_proposal_id().simulate({
+      from,
+      fee: {
+        paymentMethod: useRegularFees(),
+        maxFeePerGas: { feePerL2Gas: 20000, feePerDaGas: 20000 },
+      },
+    });
 
     const tx = await contract.methods
       .propose_remove_signer(AztecAddress.fromString(signerAddress))
@@ -219,9 +231,13 @@ export class MultiSigService {
     const contract = await this.ensureContract();
     const from = await this.getUserAddress();
 
-    const nextId = await contract.methods
-      .get_next_proposal_id()
-      .simulate({ from });
+    const nextId = await contract.methods.get_next_proposal_id().simulate({
+      from,
+      fee: {
+        paymentMethod: useRegularFees(),
+        maxFeePerGas: { feePerL2Gas: 20000, feePerDaGas: 20000 },
+      },
+    });
 
     const tx = await contract.methods
       .propose_change_threshold(newThreshold)
@@ -307,9 +323,13 @@ export class MultiSigService {
     return retryWithBackoff(async () => {
       const contract = await this.ensureContract();
       const from = await this.getUserAddress();
-      const threshold = await contract.methods
-        .get_threshold()
-        .simulate({ from });
+      const threshold = await contract.methods.get_threshold().simulate({
+        from,
+        fee: {
+          paymentMethod: useRegularFees(),
+          maxFeePerGas: { feePerL2Gas: 20000, feePerDaGas: 20000 },
+        },
+      });
       return Number(threshold);
     });
   }
@@ -321,9 +341,13 @@ export class MultiSigService {
     return retryWithBackoff(async () => {
       const contract = await this.ensureContract();
       const from = await this.getUserAddress();
-      const count = await contract.methods
-        .get_signer_count()
-        .simulate({ from });
+      const count = await contract.methods.get_signer_count().simulate({
+        from,
+        fee: {
+          paymentMethod: useRegularFees(),
+          maxFeePerGas: { feePerL2Gas: 20000, feePerDaGas: 20000 },
+        },
+      });
       return Number(count);
     });
   }
@@ -337,8 +361,77 @@ export class MultiSigService {
       const from = await this.getUserAddress();
       const isSigner = await contract.methods
         .is_signer(AztecAddress.fromString(address))
-        .simulate({ from });
+        .simulate({
+          from,
+          fee: {
+            paymentMethod: useRegularFees(),
+            maxFeePerGas: { feePerL2Gas: 20000, feePerDaGas: 20000 },
+          },
+        });
       return Boolean(isSigner);
+    });
+  }
+
+  /**
+   * Get full proposal data from contract
+   * Returns the complete Proposal struct with all fields
+   */
+  async getProposalFromContract(proposalId: string): Promise<{
+    proposalId: bigint;
+    operationType: number;
+    proposer: string;
+    targetAddress: string;
+    newThreshold: number;
+    transactionToken: string;
+    transactionRecipient: string;
+    transactionAmount: bigint;
+    signatureCount: number;
+    executed: boolean;
+    createdAt: number;
+  } | null> {
+    return retryWithBackoff(async () => {
+      const contract = await this.ensureContract();
+      const from = await this.getUserAddress();
+      const result = await contract.methods
+        .get_proposal(BigInt(proposalId))
+        .simulate({
+          from,
+          fee: {
+            paymentMethod: useRegularFees(),
+            maxFeePerGas: { feePerL2Gas: 20000, feePerDaGas: 20000 },
+          },
+        });
+
+      // The result is a struct with fields in order:
+      // proposal_id, operation_type, proposer, target_address, new_threshold,
+      // transaction_token, transaction_recipient, transaction_amount,
+      // signature_count, executed, created_at
+
+      // Helper to convert EthAddress to string - handles various return formats
+      const ethAddressToString = (addr: { inner: bigint }): string => {
+        // Check for inner property (serialized struct)
+        try {
+          return EthAddress.fromNumber(addr.inner).toString();
+        } catch {
+          return `0x${addr.inner.toString(16).padStart(40, "0")}`;
+        }
+      };
+
+      const proposal = {
+        proposalId: result.proposal_id,
+        operationType: Number(result.operation_type),
+        proposer: result.proposer.toString(),
+        targetAddress: result.target_address.toString(),
+        newThreshold: Number(result.new_threshold),
+        transactionToken: ethAddressToString(result.transaction_token),
+        transactionRecipient: ethAddressToString(result.transaction_recipient),
+        transactionAmount: result.transaction_amount,
+        signatureCount: Number(result.signature_count),
+        executed: Boolean(result.executed),
+        createdAt: Number(result.created_at),
+      };
+
+      return proposal;
     });
   }
 
@@ -351,7 +444,13 @@ export class MultiSigService {
       const from = await this.getUserAddress();
       const opType = await contract.methods
         .get_proposal_operation_type(BigInt(proposalId))
-        .simulate({ from });
+        .simulate({
+          from,
+          fee: {
+            paymentMethod: useRegularFees(),
+            maxFeePerGas: { feePerL2Gas: 20000, feePerDaGas: 20000 },
+          },
+        });
       return Number(opType);
     });
   }
@@ -365,7 +464,13 @@ export class MultiSigService {
       const from = await this.getUserAddress();
       const count = await contract.methods
         .get_proposal_signature_count(BigInt(proposalId))
-        .simulate({ from });
+        .simulate({
+          from,
+          fee: {
+            paymentMethod: useRegularFees(),
+            maxFeePerGas: { feePerL2Gas: 20000, feePerDaGas: 20000 },
+          },
+        });
       return Number(count);
     });
   }
@@ -379,7 +484,13 @@ export class MultiSigService {
       const from = await this.getUserAddress();
       const executed = await contract.methods
         .get_proposal_executed(BigInt(proposalId))
-        .simulate({ from });
+        .simulate({
+          from,
+          fee: {
+            paymentMethod: useRegularFees(),
+            maxFeePerGas: { feePerL2Gas: 20000, feePerDaGas: 20000 },
+          },
+        });
       return Boolean(executed);
     });
   }
@@ -394,9 +505,13 @@ export class MultiSigService {
       console.log("Contract:", contract);
       const from = await this.getUserAddress();
       console.log("Getting next proposal ID from:", from.toString());
-      const nextId = await contract.methods
-        .get_next_proposal_id()
-        .simulate({ from });
+      const nextId = await contract.methods.get_next_proposal_id().simulate({
+        from,
+        fee: {
+          paymentMethod: useRegularFees(),
+          maxFeePerGas: { feePerL2Gas: 20000, feePerDaGas: 20000 },
+        },
+      });
       console.log("Next proposal ID:", nextId.toString());
       return Number(nextId);
     });
@@ -409,9 +524,13 @@ export class MultiSigService {
     return retryWithBackoff(async () => {
       const contract = await this.ensureContract();
       const from = await this.getUserAddress();
-      const address = await contract.methods
-        .get_wormhole_address()
-        .simulate({ from });
+      const address = await contract.methods.get_wormhole_address().simulate({
+        from,
+        fee: {
+          paymentMethod: useRegularFees(),
+          maxFeePerGas: { feePerL2Gas: 20000, feePerDaGas: 20000 },
+        },
+      });
       return address.toString();
     });
   }
@@ -458,30 +577,32 @@ export class MultiSigService {
    */
   async loadProposal(proposalId: string): Promise<Proposal | null> {
     try {
-      const opType = await this.getProposalOperationType(proposalId);
+      // Get full proposal data in a single call
+      const contractProposal = await this.getProposalFromContract(proposalId);
 
       // If operation type is 0, proposal doesn't exist
-      if (opType === 0) {
+      if (!contractProposal || contractProposal.operationType === 0) {
         return null;
       }
 
-      const [signatureCount, executed, threshold] = await Promise.all([
-        this.getProposalSignatureCount(proposalId),
-        this.getProposalExecuted(proposalId),
-        this.getThreshold(),
-      ]);
+      // Get current threshold (needed for status calculation)
+      const threshold = await this.getThreshold();
 
       const proposal: Proposal = {
         id: proposalId,
-        operationType: opType as OperationType,
-        signatureCount,
-        executed,
+        operationType: contractProposal.operationType as OperationType,
+        proposer: contractProposal.proposer,
+        signatureCount: contractProposal.signatureCount,
+        executed: contractProposal.executed,
         threshold,
+        createdAt: contractProposal.createdAt,
+        // Type-specific fields
+        targetAddress: contractProposal.targetAddress,
+        newThreshold: contractProposal.newThreshold,
+        transactionToken: contractProposal.transactionToken,
+        transactionRecipient: contractProposal.transactionRecipient,
+        transactionAmount: contractProposal.transactionAmount.toString(),
       };
-
-      // Load type-specific fields based on operation type
-      // Note: The contract doesn't store all proposal details
-      // You may need to emit events and index them to get full details
 
       return proposal;
     } catch (error) {
