@@ -26,6 +26,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { WalletConnectButton } from "@/components/wallet/wallet-connect-button";
+import { getTokenByAddress } from "@/lib/constants/tokens";
 import { createMultiSigService } from "@/lib/contracts/multisig";
 import { useProposalStore } from "@/lib/stores/proposal-store";
 import { useWalletStore } from "@/lib/stores/wallet-store";
@@ -375,11 +376,30 @@ export default function ProposalDetailPage() {
                   <div className="border-t pt-4 space-y-3">
                     <div>
                       <div className="text-sm font-medium text-muted-foreground mb-1">
-                        Token Address
+                        Token
                       </div>
-                      <div className="text-sm font-mono break-all">
-                        {proposal.transactionToken || "N/A"}
-                      </div>
+                      {(() => {
+                        const tokenInfo = proposal.transactionToken
+                          ? getTokenByAddress(proposal.transactionToken)
+                          : null;
+                        return tokenInfo ? (
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium">
+                              {tokenInfo.symbol}{" "}
+                              <span className="text-muted-foreground font-normal">
+                                ({tokenInfo.name})
+                              </span>
+                            </div>
+                            <div className="text-xs font-mono text-muted-foreground break-all">
+                              {proposal.transactionToken}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm font-mono break-all">
+                            {proposal.transactionToken || "N/A"}
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div>
                       <div className="text-sm font-medium text-muted-foreground mb-1">

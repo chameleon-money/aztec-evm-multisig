@@ -1,10 +1,18 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Loader2,
+  Send,
+  Settings2,
+  Shield,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
-import { useWalletStore } from "@/lib/stores/wallet-store";
-import { useProposalStore } from "@/lib/stores/proposal-store";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,17 +20,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { WalletConnectButton } from "@/components/wallet/wallet-connect-button";
 import {
-  Shield,
-  ArrowLeft,
-  Send,
-  Users,
-  Settings2,
-  Loader2,
-  AlertCircle,
-} from "lucide-react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { WalletConnectButton } from "@/components/wallet/wallet-connect-button";
+import { getTokenByAddress, TOKENS } from "@/lib/constants/tokens";
+import { useProposalStore } from "@/lib/stores/proposal-store";
+import { useWalletStore } from "@/lib/stores/wallet-store";
 import type { CreateProposalParams } from "@/lib/types/proposal";
 
 type ProposalType =
@@ -65,17 +73,38 @@ function NewProposalForm() {
       let params: CreateProposalParams;
 
       switch (proposalType) {
-        case "transaction":
+        case "transaction": {
           if (!token || !recipient || !amount) {
             throw new Error("All transaction fields are required");
           }
+          const tokenInfo = getTokenByAddress(token);
+          if (!tokenInfo) {
+            throw new Error("Invalid token selected");
+          }
+          // Parse the human-readable amount and convert to smallest unit
+          const parsedAmount = parseFloat(amount);
+          if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+            throw new Error("Amount must be a positive number");
+          }
+          // Convert to smallest unit (multiply by 10^decimals)
+          const multiplier = BigInt(10 ** tokenInfo.decimals);
+          // Handle decimal amounts by splitting into whole and fractional parts
+          const [wholePart, fractionalPart = ""] = amount.split(".");
+          const paddedFractional = fractionalPart
+            .padEnd(tokenInfo.decimals, "0")
+            .slice(0, tokenInfo.decimals);
+          const amountInSmallestUnit =
+            BigInt(wholePart || "0") * multiplier +
+            BigInt(paddedFractional || "0");
+
           params = {
             type: "transaction",
             token,
             recipient,
-            amount: BigInt(amount),
+            amount: amountInSmallestUnit,
           };
           break;
+        }
 
         case "add_signer":
           if (!signerAddress) {
@@ -97,7 +126,7 @@ function NewProposalForm() {
           };
           break;
 
-        case "change_threshold":
+        case "change_threshold": {
           if (!newThreshold) {
             throw new Error("New threshold is required");
           }
@@ -110,6 +139,7 @@ function NewProposalForm() {
             newThreshold: thresholdNum,
           };
           break;
+        }
 
         default:
           throw new Error("Invalid proposal type");
@@ -350,19 +380,27 @@ function NewProposalForm() {
                     htmlFor="token"
                     className="block text-sm font-medium mb-2"
                   >
-                    Token Address
+                    Token
                   </label>
-                  <input
-                    id="token"
-                    type="text"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                    placeholder="0x..."
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
+                  <Select value={token} onValueChange={setToken}>
+                    <SelectTrigger id="token">
+                      <SelectValue placeholder="Select a token" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(TOKENS).map((t) => (
+                        <SelectItem key={t.address} value={t.address}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{t.symbol}</span>
+                            <span className="text-muted-foreground">
+                              - {t.name}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground mt-1">
-                    EVM-compatible token address (e.g., Ethereum address)
+                    Select the token to transfer
                   </p>
                 </div>
 
@@ -394,17 +432,32 @@ function NewProposalForm() {
                   >
                     Amount
                   </label>
-                  <input
-                    id="amount"
-                    type="text"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="1000000000000000000"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      id="amount"
+                      type="text"
+                      inputMode="decimal"
+                      value={amount}
+                      onChange={(e) => {
+                        // Allow only valid decimal number input
+                        const value = e.target.value;
+                        if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                          setAmount(value);
+                        }
+                      }}
+                      placeholder="0.00"
+                      className="w-full px-3 py-2 pr-16 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                    {token && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                        {getTokenByAddress(token)?.symbol}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Amount in smallest unit (e.g., wei for ETH)
+                    Enter the amount in{" "}
+                    {token ? getTokenByAddress(token)?.symbol : "tokens"}
                   </p>
                 </div>
               </CardContent>
